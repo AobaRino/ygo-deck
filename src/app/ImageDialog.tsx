@@ -1,20 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCard, loadBanlists, loadCards, type Banlist } from '../lib/data';
-import { allIds, deckToParams, type Deck } from '../lib/deck';
+import { allIds, deckToParams, resolveBanlist, type Deck } from '../lib/deck';
 import { canvasToBlob, renderDeckImage } from '../lib/deckImage';
 import { siteBase } from '../lib/util';
 import Modal from './Modal';
 
 interface Props {
   deck: Deck;
-  /** 不传则用最新禁卡表；传 null 表示不标禁限 */
+  /** 不传则按 banlistName / 最新禁卡表；传 null 表示不标禁限 */
   banlist?: Banlist | null;
+  /** 分享链接指定的禁卡表名；与 banlist 同时缺省时用最新表 */
+  banlistName?: string;
   onClose: () => void;
 }
 
 const fileName = (deck: Deck) => `${(deck.name || 'deck').replace(/[\\/:*?"<>|]/g, '_')}.jpg`;
 
-export default function ImageDialog({ deck, banlist, onClose }: Props) {
+export default function ImageDialog({ deck, banlist, banlistName, onClose }: Props) {
   const [progress, setProgress] = useState<[number, number]>([0, 0]);
   const [result, setResult] = useState<{ url: string; jpeg: Blob; missing: number } | null>(null);
   const [error, setError] = useState('');
@@ -25,7 +27,10 @@ export default function ImageDialog({ deck, banlist, onClose }: Props) {
     let alive = true;
     let objectUrl = '';
     const base = siteBase();
-    const banlistReady = banlist !== undefined ? Promise.resolve(banlist) : loadBanlists().then((l) => l[0] ?? null, () => null);
+    const banlistReady =
+      banlist !== undefined
+        ? Promise.resolve(banlist)
+        : loadBanlists().then((l) => resolveBanlist(l, banlistName), () => null);
     // 卡片数据（卡名、类型、攻守）可能还没加载完，比如分享页刚打开就点了导出，先等它就绪
     Promise.all([banlistReady, loadCards(allIds(deck))])
       .then(([bl]) =>
@@ -33,7 +38,7 @@ export default function ImageDialog({ deck, banlist, onClose }: Props) {
           lookup: getCard,
           banlist: bl,
           // 卡组名只取前 12 个字，控制二维码密度（图片里已经印着完整卡组名）
-          url: `${base}#/view?${deckToParams(deck, 12)}`,
+          url: `${base}#/view?${deckToParams(deck, { maxNameLength: 12, banlistName: bl?.name ?? '' })}`,
           thumbBase: new URL('thumbs/', base).href,
           siteLabel: base.replace(/^https?:\/\//, '').replace(/\/$/, ''),
           onProgress: (n, total) => alive && setProgress([n, total]),
@@ -51,7 +56,7 @@ export default function ImageDialog({ deck, banlist, onClose }: Props) {
       alive = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [deck, banlist]);
+  }, [deck, banlist, banlistName]);
 
   function flash(text: string) {
     setMsg(text);

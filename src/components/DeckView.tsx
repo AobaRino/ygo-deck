@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { isMonster, isSpell, isTrap, type Card } from '../lib/card';
 import { loadBanlists, loadCards, loadSetnames, type Banlist } from '../lib/data';
-import { ZONES, ZONE_LABELS, allIds, copyLimit, deckToParams, toYdk, toYdke, type Deck } from '../lib/deck';
+import { ZONES, ZONE_LABELS, allIds, banlistLabel, copyLimit, deckToParams, resolveBanlist, toYdk, toYdke, type Deck } from '../lib/deck';
 import { copyText, downloadText } from '../lib/util';
 import CardImage from './CardImage';
 import CardZoom from './CardZoom';
 
 interface Props {
   deck: Deck;
+  /** 链接指定的禁卡表名；undefined 表示旧链接（用最新表）；空字符串表示无限制 */
+  banlistName?: string;
   /** 组卡器地址，用于「在组卡器中打开」 */
   builderUrl?: string;
   compact?: boolean;
@@ -17,7 +19,7 @@ interface Props {
 }
 
 /** 只读卡组展示：分享页、iframe 嵌入页、<ygo-deck> 组件共用 */
-export default function DeckView({ deck, builderUrl, compact = false, showToolbar = true, onExportImage }: Props) {
+export default function DeckView({ deck, banlistName, builderUrl, compact = false, showToolbar = true, onExportImage }: Props) {
   const [cards, setCards] = useState<Map<number, Card> | null>(null);
   const [error, setError] = useState('');
   const [banlist, setBanlist] = useState<Banlist | null>(null);
@@ -32,7 +34,7 @@ export default function DeckView({ deck, builderUrl, compact = false, showToolba
       .then((m) => alive && setCards(new Map(m)))
       .catch((e: Error) => alive && setError(e.message));
     loadBanlists()
-      .then((l) => alive && setBanlist(l[0] ?? null))
+      .then((l) => alive && setBanlist(resolveBanlist(l, banlistName)))
       .catch(() => {});
     loadSetnames()
       .then((s) => alive && setSetnames(s))
@@ -40,7 +42,7 @@ export default function DeckView({ deck, builderUrl, compact = false, showToolba
     return () => {
       alive = false;
     };
-  }, [deck]);
+  }, [deck, banlistName]);
 
   const lookup = (id: number) => cards?.get(id);
   const flat = useMemo(() => allIds(deck), [deck]);
@@ -55,7 +57,9 @@ export default function DeckView({ deck, builderUrl, compact = false, showToolba
     else if (isTrap(c)) stats.trap++;
   }
 
-  const openUrl = builderUrl ? `${builderUrl}#/?${deckToParams(deck)}` : '';
+  const openBanlist = banlistName !== undefined ? banlistName : banlist?.name;
+  const openUrl = builderUrl ? `${builderUrl}#/?${deckToParams(deck, { banlistName: openBanlist })}` : '';
+  const shownBanlist = banlistName === '' ? banlistLabel(null) : banlist ? banlistLabel(banlist) : '';
 
   function flash(msg: string) {
     setToast(msg);
@@ -70,6 +74,7 @@ export default function DeckView({ deck, builderUrl, compact = false, showToolba
           <span className="ygo-deck-counts">
             主 {deck.main.length} · 额外 {deck.extra.length} · 副 {deck.side.length}
             {cards && ` （怪兽 ${stats.monster} / 魔法 ${stats.spell} / 陷阱 ${stats.trap}）`}
+            {shownBanlist && ` · ${shownBanlist}`}
           </span>
         </div>
         {showToolbar && (

@@ -4,7 +4,7 @@ import '../lib/theme.css';
 import '../components/components.css';
 import '../app/app.css';
 import DeckView from '../components/DeckView';
-import { deckFromParams } from '../lib/deck';
+import { banlistFromParams, deckFromParams } from '../lib/deck';
 import { siteBase } from '../lib/util';
 
 const params = new URLSearchParams(location.hash.replace(/^#\/?/, '').replace(/^[^?=&]*\?/, ''));
@@ -14,7 +14,9 @@ const theme = params.get('theme');
 if (theme === 'light' || theme === 'dark') document.documentElement.setAttribute('data-theme', theme);
 
 if (deck) {
-  createRoot(target).render(<DeckView deck={deck} builderUrl={siteBase()} compact={params.has('compact')} />);
+  createRoot(target).render(
+    <DeckView deck={deck} banlistName={banlistFromParams(params)} builderUrl={siteBase()} compact={params.has('compact')} />,
+  );
 } else {
   target.textContent = '链接中没有卡组数据';
 }

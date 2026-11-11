@@ -1,31 +1,34 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import DeckView from '../components/DeckView';
-import { deckFromParams, deckSize, type Deck } from '../lib/deck';
+import { banlistFromParams, deckFromParams, deckSize, type Deck } from '../lib/deck';
 import { siteBase } from '../lib/util';
 import Builder from './Builder';
-import { setDeck, useStore } from './store';
+import { setBanlist, setDeck, useStore } from './store';
 
 const ImageDialog = lazy(() => import('./ImageDialog'));
 
-type Route = { page: 'builder'; open?: Deck } | { page: 'view'; deck: Deck };
+type Route = { page: 'builder'; open?: Deck; banlist?: string } | { page: 'view'; deck: Deck; banlist?: string };
 
 /** hash 路由：#/view?deck=… 只读分享页；#/?deck=… 在组卡器中打开 */
 function parseHash(): Route {
   const h = location.hash.replace(/^#\/?/, '');
   const [path, query = ''] = h.split('?');
-  const deck = deckFromParams(new URLSearchParams(query));
-  if (path === 'view' && deck) return { page: 'view', deck };
-  return { page: 'builder', open: deck ?? undefined };
+  const params = new URLSearchParams(query);
+  const deck = deckFromParams(params);
+  const banlist = banlistFromParams(params);
+  if (path === 'view' && deck) return { page: 'view', deck, banlist };
+  return { page: 'builder', open: deck ?? undefined, banlist };
 }
 
 /** 编辑链接：把链接里的卡组载入组卡器（同一个链接只处理一次） */
 let handledHash = '';
-function openDeckLink(deck: Deck) {
+function openDeckLink(deck: Deck, banlist?: string) {
   if (handledHash === location.hash) return;
   handledHash = location.hash;
   const current = useStore.getState().deck;
   if (!deckSize(current) || confirm(`打开链接中的卡组「${deck.name || '未命名'}」？当前编辑中的卡组会被替换（已保存的不受影响）。`)) {
     setDeck(deck);
+    if (banlist !== undefined) setBanlist(banlist);
   }
   history.replaceState(null, '', location.pathname + location.search);
 }
@@ -50,7 +53,7 @@ export default function App() {
   const toast = useStore((s) => s.toast);
 
   useEffect(() => {
-    if (route.page === 'builder' && route.open) openDeckLink(route.open);
+    if (route.page === 'builder' && route.open) openDeckLink(route.open, route.banlist);
   }, [route]);
 
   useEffect(() => {
@@ -94,10 +97,10 @@ export default function App() {
 
       {route.page === 'view' ? (
         <div className="view-page">
-          <DeckView deck={route.deck} builderUrl={siteBase()} onExportImage={() => setImageOpen(true)} />
+          <DeckView deck={route.deck} banlistName={route.banlist} builderUrl={siteBase()} onExportImage={() => setImageOpen(true)} />
           {imageOpen && (
             <Suspense>
-              <ImageDialog deck={route.deck} onClose={() => setImageOpen(false)} />
+              <ImageDialog deck={route.deck} banlistName={route.banlist} onClose={() => setImageOpen(false)} />
             </Suspense>
           )}
         </div>

@@ -7,7 +7,7 @@
 import { encode } from 'uqr';
 import { frameKind, isLink, isMonster, isSpell, isTrap, statLabel, type Card } from './card';
 import type { Banlist } from './data';
-import { ZONES, ZONE_LABELS, copyLimit, type Deck } from './deck';
+import { ZONES, ZONE_LABELS, banlistLabel, copyLimit, type Deck } from './deck';
 import { imageUrls } from './images';
 
 export interface DeckImageOptions {
@@ -307,7 +307,7 @@ export async function renderDeckImage(deck: Deck, opts: DeckImageOptions): Promi
   const sub = [
     `主卡组 ${deck.main.length} · 额外 ${deck.extra.length} · 副卡组 ${deck.side.length}`,
     `怪兽 ${stats.m} / 魔法 ${stats.s} / 陷阱 ${stats.t}`,
-    opts.banlist ? `禁卡表 ${opts.banlist.name}` : '',
+    banlistLabel(opts.banlist ?? null),
   ].filter(Boolean);
   ctx.fillStyle = '#a3acbd';
   ctx.font = `400 16px ${FONT}`;

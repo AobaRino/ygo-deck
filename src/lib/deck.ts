@@ -162,11 +162,15 @@ export function parseShareCode(code: string, name = ''): Deck {
 }
 
 /** 卡组 → URL 参数（放在 hash 中，静态托管即可，无需后端） */
-export function deckToParams(deck: Deck, maxNameLength = Infinity): URLSearchParams {
+export function deckToParams(
+  deck: Deck,
+  opts?: { maxNameLength?: number; banlistName?: string },
+): URLSearchParams {
   const p = new URLSearchParams();
   p.set('deck', toShareCode(deck));
-  const name = [...deck.name].slice(0, maxNameLength).join('');
+  const name = [...deck.name].slice(0, opts?.maxNameLength ?? Infinity).join('');
   if (name) p.set('name', name);
+  if (opts?.banlistName !== undefined) p.set('banlist', opts.banlistName);
   return p;
 }
 
@@ -178,6 +182,23 @@ export function deckFromParams(p: URLSearchParams): Deck | null {
   } catch {
     return null;
   }
+}
+
+/** 链接未带 banlist 时返回 undefined（旧链接，回退到最新禁卡表）；空字符串表示无限制 */
+export function banlistFromParams(p: URLSearchParams): string | undefined {
+  if (!p.has('banlist')) return undefined;
+  return p.get('banlist') ?? '';
+}
+
+/** name 未指定时用最新表；空字符串表示无限制；未知名称回退到最新表 */
+export function resolveBanlist(lists: Banlist[], name?: string): Banlist | null {
+  if (name === '') return null;
+  if (name) return lists.find((b) => b.name === name) ?? lists[0] ?? null;
+  return lists[0] ?? null;
+}
+
+export function banlistLabel(list: Banlist | null): string {
+  return `禁卡表 ${list?.name || '无限制'}`;
 }
 
 /** 识别用户粘贴的任意格式：ydke://、YDK 文本、分享链接、纯 id 列表 */

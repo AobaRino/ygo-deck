@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { deckSize, parseAny } from '../lib/deck';
+import { banlistFromParams, deckSize, parseAny } from '../lib/deck';
 import Modal from './Modal';
-import { setDeck, toast } from './store';
+import { setBanlist, setDeck, toast } from './store';
 
 export default function ImportDialog({ onClose }: { onClose: () => void }) {
   const [text, setText] = useState('');
@@ -23,6 +23,12 @@ export default function ImportDialog({ onClose }: { onClose: () => void }) {
     }
     if (!deck.name) deck.name = name.trim();
     setDeck(deck);
+    const hash = text.trim().indexOf('#');
+    if (/^https?:\/\//i.test(text.trim()) && hash >= 0) {
+      const q = text.trim().slice(hash + 1).replace(/^\/?[^?]*\?/, '');
+      const banlist = banlistFromParams(new URLSearchParams(q));
+      if (banlist !== undefined) setBanlist(banlist);
+    }
     toast(`已导入 ${deckSize(deck)} 张卡`);
     onClose();
   }
