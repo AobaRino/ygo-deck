@@ -73,6 +73,7 @@ export default function App() {
     <>
       <header className="top">
         <a className="logo" href="#/">
+          <span className="logo-mark" aria-hidden="true" />
           YGO 组卡器
         </a>
         {route.page === 'builder' && meta && (

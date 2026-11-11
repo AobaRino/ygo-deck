@@ -149,7 +149,7 @@ export default function SearchPanel() {
       <input className="input search" type="search" placeholder="搜索卡名 / 效果 / 卡号，空格分隔多个关键词" value={text} onChange={(e) => setText(e.target.value)} />
       <div className="kinds">
         {KINDS.map(([k, label]) => (
-          <button key={k} className={q.kind === k ? 'seg on' : 'seg'} onClick={() => patch({ kind: k, subtype: 0 })}>
+          <button key={k} className={q.kind === k ? 'seg on' : 'seg'} data-kind={k} onClick={() => patch({ kind: k, subtype: 0 })}>
             {label}
           </button>
         ))}
